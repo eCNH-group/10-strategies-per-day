@@ -7,3 +7,11 @@
 
 # 10 strategies per month
 
+Andromeda 1 eCNH ≈ 0.1353-0.1463 USDC ≈ 1 CNH,
+
+earth & Global Humanity Builds and Shares eCNH Together.
+
+Distributed Stablecoin eCNH CA: 
+
+7GQnqthWKa5v2GqXYWhmgWZY5mCRrniwK3Xuinm9GKw5u
+
