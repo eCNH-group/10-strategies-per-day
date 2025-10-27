@@ -4,6 +4,14 @@
 
 <img width="245" height="650" alt="10 strategies per day,eCNH每日10策系列 194ee06f790ea7d68c6d40e7d5b56efd" src="https://github.com/user-attachments/assets/d2c91b24-dc89-496a-b9aa-0290e0071a21" />
 
+Create 10 free or low-cost promotion and development plans for eCNH,
+
+Produce 10 free or low-cost promotion and development plans for eCNH every day.
+
+制作10个可以免费或者低成本推广发展eCNH的方案，
+
+每天制作10个可以免费或者低成本推广发展eCNH的方案.
+
 
 # 10 strategies per month
 
