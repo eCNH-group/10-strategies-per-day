@@ -15,7 +15,7 @@ Produce 10 free or low-cost promotion and development plans for eCNH every day.
 
 # 10 strategies per month
 
-Andromeda 1 eCNH ≈ 0.1353-0.1463 USDC ≈ 1 CNH,
+Andromeda 1 eCNH ≈ 0.1353-0.1463 USDT ≈ 1 CNH,
 
 earth & Global Humanity Builds and Shares eCNH Together.
 
