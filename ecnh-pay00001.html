@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCNH 加密货币收款网关</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- QRCode.js -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- Web3.js (用于模拟区块链交互) -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.5/dist/web3.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0052cc',
+                        secondary: '#0747a6',
+                        accent: '#00b8d9',
+                        dark: '#172b4d',
+                        light: '#ebecf0',
+                        success: '#36b37e',
+                        warning: '#ffab00',
+                        danger: '#ff5630',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-blue {
+                background: linear-gradient(135deg, #0052cc 0%, #0747a6 100%);
+            }
+            .bg-gradient-dark {
+                background: linear-gradient(135deg, #172b4d 0%, #0d1b2a 100%);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .qr-container {
+                position: relative;
+                display: inline-block;
+            }
+            .qr-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: rgba(255, 255, 255, 0.8);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .qr-container:hover .qr-overlay {
+                opacity: 1;
+            }
+            .clipboard-tooltip {
+                position: relative;
+            }
+            .clipboard-tooltip .tooltip-text {
+                visibility: hidden;
+                width: 120px;
+                background-color: #333;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -60px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .clipboard-tooltip:hover .tooltip-text {
+                visibility: visible;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-gradient-blue text-white shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center-center">
+            <div class="flex items-center space-x-2">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/103782599f554ae39dacc3203f404bdd~tplv-a9rns2rl98-image.image?rcl=2025102715471523559FDC5C227DF82F83&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1764143267&x-signature=lwKOGmIUpSXVbL6hiFpFl%2FM5ehk%3D" alt="eCNH Logo" class="h-10 w-10">
+                <span class="text-xl font-bold">eCNH 收款网关</span>
+            </div>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="#" class="hover:text-accent transition-colors duration-300">首页</a>
+                <a href="#create-payment" class="hover:text-accent transition-colors duration-300">创建收款</a>
+                <a href="#payment-status" class="hover:text-accent transition-colors duration-300">交易状态</a>
+                <a href="#about" class="hover:text-accent transition-colors duration-300">关于</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-white focus:outline-none">
+                    <i class="fa fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- 移动端菜单 -->
+        <div id="mobile-menu" class="hidden md:hidden bg-secondary">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-2">
+                <a href="#" class="block py-2 hover:text-accent transition-colors duration-300">首页</a>
+                <a href="#create-payment" class="block py-2 hover:text-accent transition-colors duration-300">创建收款</a>
+                <a href="#payment-status" class="block py-2 hover:text-accent transition-colors duration-300">交易状态</a>
+                <a href="#about" class="block py-2 hover:text-accent transition-colors duration-300">关于</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区域 -->
+    <header class="bg-gradient-dark text-white py-16 md:py-24">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl md:text-5xl font-bold mb-4 text-shadow">秒级收款，无需平台资质</h1>
+            <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">使用 eCNH 加密货币收款网关，仅需一个钱包地址，即可完成全球范围内的秒级收款，避免平台抽成</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#create-payment" class="bg-accent hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg">
+                    <i class="fa fa fa-plus mr-2"></i>创建收款
+                </a>
+                <a href="#about" class="bg-transparent border-2 border-white hover:bg-white hover:text-dark font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                    <i class="fa fa-info-circle mr-2"></i>了解更多
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 特点介绍 -->
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-12">为什么选择 eCNH 收款网关</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md card-hover">
+                    <div class="bg-blue-100 text-primary p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                        <i class="fa fa-bolt text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">秒级收款</h3>
+                    <p class="text-gray-600">区块链技术确保交易快速确认，无需等待传统支付方式的结算周期</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg-lg shadow-md card-hover">
+                    <div class="bg-blue-100 text-primary p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                        <i class="fa fa-shield text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">安全可靠</h3>
+                    <p class="text-gray-600">去中心化技术保障交易安全，无需第三方中间方，资金平台抽成，资金直接到账</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md card-hover">
+                    <div class="bg-blue-100 text-primary p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                        <i class="fa fa-globe text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">全球通用</h3>
+                    <p class="text-gray-600">支持全球范围内的支付，不受地域限制，无需担心跨境支付问题</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 创建收款表单 -->
+        <section id="create-payment" class="mb-16">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-blue text-white p-6">
+                    <h2 class="text-2xl font-bold">创建收款</h2>
+                    <p>填写以下信息，生成您的专属收款二维码</p>
+                </div>
+                <div class="p-6">
+                    <form id="payment-form" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="wallet-address" class="block text-sm font-medium text-gray-700 mb-1">钱包地址 <span class="text-danger">*</span></label>
+                                <div class="relative">
+                                    <input type="text" id="wallet-address" name="wallet-address" placeholder="请输入您的 eCNH 钱包地址" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <i class="fa fa-address-card text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">收款货币 <span class="text-danger">*</span></label>
+                                <select id="currency" name="currency" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
+                                    <option value="ecnh">eCNH (1 eCNH ≈ 1 CNH)</option>
+                                    <option value="usdc">USDC (0.1353-0.1463 USDC ≈ 1 CNH)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">收款金额 <span class="text-danger">*</span></label>
+                                <div class="relative">
+                                    <input type="number" id="amount" name="amount" min="0.01" step="0.01" placeholder="请输入收款金额" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span id="currency-symbol" class="text-gray-400">CNH</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">收款标题/商品名称</label>
+                                <input type="text" id="title" name="title" placeholder="例如：文章订阅、软件授权"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">描述（可选）</label>
+                            <textarea id="description" name="description" rows="3" placeholder="请输入收款描述信息"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" id="generate-qr-btn" class="bg-primary hover:bg-secondary text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300">
+                                <i class="fa fa-qrcode mr-2"></i>生成收款二维码
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 收款二维码展示 -->
+        <section id="payment-qr" class="mb-16 hidden">
+            <div class="bg-white rounded-lg-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-blue text-white p-6">
+                    <h2 class="text-2xl font-bold">您的收款二维码</h2>
+                    <p>请使用加密货币钱包扫描下方二维码码进行支付</p>
+                </div>
+                <div class="p-6">
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                        <!-- 二维码展示 -->
+                        <div class="qr-container bg-white p-4 rounded-lg shadow-md">
+                            <div id="qrcode" class="w-64 h-64 mx-auto"></div>
+                            <div class="qr-overlay">
+                                <button id="download-qr" class="bg-primary hover:bg-secondary text-white p-2 rounded-full">
+                                    <i class="fa fa-download text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 收款信息 -->
+                        <div class="w-full md:w-1/3">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-xl font-bold mb-4 text-center">收款信息</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500">收款地址</p>
+                                        <div class="flex items-center mt-1">
+                                            <input type="text" id="display-address" readonly
+                                                class="flex-1 bg-white px-3 py-2 border border-gray-300 rounded-md-md focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <button id="copy-address" class="ml-2 bg-gray-200 hover:bg-gray-300 p-2 rounded-md">
+                                                <i class="fa fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500">收款金额</p>
+                                        <p id="display-amount" class="text-xl font-bold mt-1"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500">商品名称</p>
+                                        <p id="display-title" class="mt-1"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500">描述</p>
+                                        <p id="display-description" class="mt-1"></p>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-200">
+                                        <button id="check-status-btn" class="w-full bg-accent hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                                            <i class="fa fa-refresh mr-2"></i>检查支付状态
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 交易状态确认 -->
+        <section id="payment-status" class="mb-16 hidden">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-blue text-white p-6">
+                    <h2 class="text-2xl font-bold">交易状态</h2>
+                    <p>实时监控您的交易状态</p>
+                </div>
+                <div class="p-6">
+                    <div id="status-loading" class="text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p class="mt-4">正在检查交易状态...</p>
+                    </div>
+                    
+                    <div id="status-pending" class="hidden">
+                        <div class="flex items-center justify-center mb-6">
+                            <div class="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <i class="fa fa-clock-o text-yellow-500 text-2xl"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-2">交易待确认</h3>
+                        <p class="text-center text-gray-600 mb-6">请等待区块链网络确认交易，这可能需要几分钟时间</p>
+                        <div class="max-w-md mx-auto">
+                            <div class="bg-gray-100 rounded-full h-2.5">
+                                <div id="confirmation-progress" class="bg-yellow-500 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>0/6 确认</span>
+                                <span id="confirmation-count">0 确认</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-6">
+                            <button id="refresh-status-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                                <i class="fa fa-refresh mr-2"></i>刷新状态
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="status-success" class="hidden">
+                        <div class="flex items-center justify-center mb-6">
+                            <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                                <i class="fa fa-check text-green-500 text-2xl"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-2">交易成功</h3>
+                        <p class="text-center text-gray-600 mb-6">您的交易已成功确认</p>
+                        <div class="max-w-md mx-auto bg-gray-50 p-4 rounded-lg">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">交易哈希</p>
+                                    <p id="tx-hash" class="text-sm font-mono mt-1 break-all"></p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">确认数</p>
+                                    <p id="tx-confirmations" class="text-sm font-mono mt-1">6/6</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-6">
+                            <a href="#" id="new-payment-btn" class="bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                                <i class="fa fa-plus mr-2"></i>创建新的收款
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div id="status-error" class="hidden">
+                        <div class="flex items-center justify-center mb-6">
+                            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                                <i class="fa fa-times text-red-500 text-2xl"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-2">交易失败</h3>
+                        <p class="text-center text-gray-600 mb-6">未检测到有效交易，请检查支付信息或重新支付</p>
+                        <div class="text-center">
+                            <button id="retry-payment-btn" class="bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                                <i class="fa fa-refresh mr-2"></i>重新生成收款码
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 关于 eCNH -->
+        <section id="about" class="mb-16">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-blue text-white p-6">
+                    <h2 class="text-2xl font-bold">关于 eCNH</h2>
+                    <p>了解更多关于 eCNH 加密货币的信息</p>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">什么是 eCNH？</h3>
+                            <p class="text-gray-600 mb-4">eCNH 是一种基于SOL区块链的分布式稳定币，旨在为用户提供安全、快速、低成本的跨境支付解决方案。eCNH 与离岸人民币（CNH）挂钩，1 eCNH ≈ 1 CNH。</p>
+                            <p class="text-gray-600 mb-4">使用 eCNH 进行支付，您可以避免传统支付方式的高额手续费和长时间等待，实现秒级到账，且不受地域限制。</p>
+                            <p class="text-gray-600">eCNH 智能合约地址：<code class="bg-gray-100 px-2 py-1 rounded">7GQnqthWKa5v2GqXYWhmgWZY5mCRrniwK3Xuinm9GKw5u</code><br>
+eCNH 是基于SOL区块链的分布式稳定币，使用Solana Pay协议进行支付处理。</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">为什么选择 eCNH 收款？</h3>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+                                    <span>无需支付宝/微信支付资质，仅需一个钱包地址</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+                                    <span>秒级到账，无需等待结算周期</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+                                    <span>无平台抽成，资金直接到账您的钱包</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+                                    <span>全球通用，支持跨境支付</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-success mt-1 mr-2"></i>
+                                    <span>开源代码，透明可审计</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <h3 class="text-xl font-bold mb-4">eCNH 交易所</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <a href="https://app.meteora.ag/dlmm/5X1XqymjmPTyCQRursrzdCJx4jTJHqgqQ6UrxwTRqFZt" target="_blank" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors duration-300 flex items-center justify-center">
+                                <span class="font-medium">Meteora</span>
+                                <i class="fa fa-external-link ml-2 text-sm"></i>
+                            </a>
+                            <a href="https://www.orca.so/pools/BHf1yCvj6qh2E1y2JLrjesP7RRC8XjBN3FyHeq45LnBZ" target="_blank" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors duration-300 flex items-center justify-center">
+                                <span class="font-medium">Orca</span>
+                                <i class="fa fa-external-link ml-2 text-sm"></i>
+                            </a>
+                            <a href="#" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors duration-300 flex items-center justify-center">
+                                <span class="font-medium">Uniswap</span>
+                                <i class="fa fa-external-link ml-2 text-sm"></i>
+                            </a>
+                            <a href="#" class="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors duration-300 flex items-center justify-center">
+                                <span class="font-medium">更多交易所</span>
+                                <i class="fa fa-external-link ml-2 text-sm"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/103782599f554ae39dacc3203f404bdd~tplv-a9rns2rl98-image.image?rcl=2025102715471523559FDC5C227DF82F83&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1764143267&x-signature=lwKOGmIUpSXVbL6hiFpFl%2FM5ehk%3D" alt="eCNH Logo" class="h-8 w-8">
+                        <span class="text-lg font-bold">eCNH 收款网关</span>
+                    </div>
+                    <p class="text-gray-400">为内容创作者、数字产品开发者和小型商家提供简单易用的加密货币收款解决方案。</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors duration-300">首页</a></li>
+                        <li><a href="#create-payment" class="text-gray-400 hover:text-white transition-colors duration-300">创建收款</a></li>
+                        <li><a href="#payment-status" class="text-gray-400 hover:text-white transition-colors duration-300">交易状态</a></li>
+                        <li><a href="#about" class="text-gray-400 hover:text-white transition-colors duration-300">关于</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope text-gray-400 mr-2"></i>
+                            <a href="mailto:contact@ecnh-payment.com" class="text-gray-400 hover:text-white transition-colors duration-300">contact@ecnh-payment.com</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-github text-gray-400 mr-2"></i>
+                            <a href="https://github.com/ecnh-payment" target="_blank" class="text-gray-400 hover:text-white transition-colors duration-300">github.com/ecnh-payment</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+                <p>&copy; 2025 eCNH 收款网关. 保留所有权利.</p>
+                <p class="mt-2 text-sm">免责声明：本工具仅供学习和演示使用，请勿用于实际生产环境。使用加密货币存在风险，请谨慎操作。</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 移动端菜单切换
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 货币符号切换
+        document.getElementById('currency').addEventListener('change', function() {
+            const currencySymbol = document.getElementById('currency-symbol');
+            if (this.value === 'ecnh') {
+                currencySymbol.textContent = 'CNH';
+            } else if (this.value === 'usdc') {
+                currencySymbol.textContent = 'USDC';
+            }
+        });
+
+        // 表单提交处理
+        document.getElementById('payment-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取表单数据
+            const walletAddress = document.getElementById('wallet-address').value;
+            const currency = document.getElementById('currency').value;
+            const amount = document.getElementById('amount').value;
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            
+            // 显示收款二维码区域
+            document.getElementById('payment-qr').classList.remove('hidden');
+            
+            // 填充收款信息
+            document.getElementById('display-address').value = walletAddress;
+            document.getElementById('display-amount').textContent = `${amount} ${currency.toUpperCase()}`;
+            document.getElementById('display-title').textContent = title || '未命名商品';
+            document.getElementById('display-description').textContent = description || '无描述';
+            
+            // 生成二维码 - 使用Solana Pay协议格式
+            // Solana Pay URL格式: solana:<recipient_address>?amount=<amount>&label=<label>&message=<message>
+            const qrData = `solana:${walletAddress}?amount=${amount}&label=${encodeURIComponent(title || 'eCNH Payment')}&message=${encodeURIComponent(description || '')}`;
+            const qrcodeContainer = document.getElementById('qrcode');
+            qrcodeContainer.innerHTML = ''; // 清空容器
+            
+            new QRCode(qrcodeContainer, {
+                text: qrData,
+                width: 256,
+                height: 256,
+                colorDark: '#0052cc',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // 滚动到二维码区域
+            document.getElementById('payment-qr').scrollIntoView({ behavior: 'smooth' });
+            
+            // 保存支付信息到本地存储
+            localStorage.setItem('paymentInfo', JSON.stringify({
+                walletAddress,
+                currency,
+                amount,
+                title,
+                description,
+                qrData,
+                createdAt: new Date().toISOString()
+            }));
+        });
+
+        // 复制地址到剪贴板
+        document.getElementById('copy-address').addEventListener('click', function() {
+            const addressInput = document.getElementById('display-address');
+            addressInput.select();
+            document.execCommand('copy');
+            
+            // 显示复制成功提示
+            this.innerHTML = '<i class="fa fa-check"></i>';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fa fa-copy"></i>';
+            }, 2000);
+        });
+
+        // 下载二维码
+        document.getElementById('download-qr').addEventListener('click', function() {
+            const qrCanvas = document.querySelector('#qrcode canvas');
+            if (qrCanvas) {
+                const link = document.createElement('a');
+                link.download = 'ecnh-payment-qr.png';
+                link.href = qrCanvas.toDataURL('image/png');
+                link.click();
+            }
+        });
+
+        // 检查支付状态
+        document.getElementById('check-status-btn').addEventListener('click', function() {
+            // 显示状态检查区域
+            document.getElementById('payment-status').classList.remove('hidden');
+            document.getElementById('status-loading').classList.remove('hidden');
+            document.getElementById('status-pending').classList.add('hidden');
+            document.getElementById('status-success').classList.add('hidden');
+            document.getElementById('status-error').classList.add('hidden');
+            
+            // 滚动到状态检查区域
+            document.getElementById('payment-status').scrollIntoView({ behavior: 'smooth' });
+            
+            // 模拟Solana区块链交易确认过程
+            simulateSolanaTransactionConfirmation();
+        });
+
+        // 刷新状态按钮
+        document.getElementById('refresh-status-btn').addEventListener('click', function() {
+            document.getElementById('status-loading').classList.remove('hidden');
+            document.getElementById('status-pending').classList.add('hidden');
+            
+            // 继续模拟确认过程
+            continueConfirmation();
+        });
+
+        // 重新生成收款码按钮
+        document.getElementById('retry-payment-btn').addEventListener('click', function() {
+            document.getElementById('payment-status').classList.add('hidden');
+            document.getElementById('payment-qr').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // 创建新的收款按钮
+        document.getElementById('new-payment-btn').addEventListener('click', function() {
+            document.getElementById('payment-status').classList.add('hidden');
+            document.getElementById('payment-qr').classList.add('hidden');
+            document.getElementById('payment-form').reset();
+            document.getElementById('create-payment').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // 模拟SOLANA区块链交易确认过程
+        let confirmationCount = 0;
+        let confirmationInterval;
+        
+        function simulateSolanaTransactionConfirmation() {
+            // 重置确认计数
+            confirmationCount = 0;
+            
+            // 模拟SOLANA交易签名
+            const txSignature = generateRandomSolanaSignature();
+            document.getElementById('tx-hash').textContent = txSignature;
+            
+            // 模拟SOLANA确认过程
+            confirmationInterval = setInterval(() => {
+                confirmationCount++;
+                
+                if (confirmationCount >= 32) {
+                    // 交易最终确认
+                    clearInterval(confirmationInterval);
+                    document.getElementById('status-loading').classList.add('hidden');
+                    document.getElementById('status-pending').classList.add('hidden');
+                    document.getElementById('status-success').classList.remove('hidden');
+                    document.getElementById('tx-confirmations').textContent = '最终确认 (32+)';
+                } else {
+                    // 交易待确认
+                    document.getElementById('status-loading').classList.add('hidden');
+                    document.getElementById('status-pending').classList.remove('hidden');
+                    document.getElementById('confirmation-progress').style.width = `${(confirmationCount / 32) * 100}%`;
+                    document.getElementById('confirmation-count').textContent = `${confirmationCount} 区块确认`;
+                }
+            }, 500);
+        }
+        
+        function continueConfirmation() {
+            // 继续Solana确认过程
+            if (confirmationCount < 32) {
+                const remainingConfirmations = 32 - confirmationCount;
+                let step = 0;
+                
+                const continueInterval = setInterval(() => {
+                    confirmationCount++;
+                    step++;
+                    
+                    document.getElementById('confirmation-progress').style.width = `${(confirmationCount / 32) * 100}%`;
+                    document.getElementById('confirmation-count').textContent = `${confirmationCount} 区块确认`;
+                    
+                    if (confirmationCount >= 32 || step >= remainingConfirmations) {
+                        clearInterval(continueInterval);
+                        
+                        if (confirmationCount >= 32) {
+                            // 交易最终确认
+                            document.getElementById('status-loading').classList.add('hidden');
+                            document.getElementById('status-pending').classList.add('hidden');
+                            document.getElementById('status-success').classList.remove('hidden');
+                            document.getElementById('tx-confirmations').textContent = '最终确认 (32+)';
+                        }
+                    }
+                }, 300);
+            }
+        }
+        
+        // 生成随机SOLANA交易签名 (base58编码)
+        function generateRandomSolanaSignature() {
+            const characters = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+            let signature = '';
+            
+            for (let i = 0; i < 88; i++) {
+                signature += characters[Math.floor(Math.random() * characters.length)];
+            }
+            
+            return signature;
+        }
+        
+        // 页面加载时检查是否有保存的支付信息
+        window.addEventListener('load', function() {
+            const savedPaymentInfo = localStorage.getItem('paymentInfo');
+            
+            if (savedPaymentInfo) {
+                const paymentInfo = JSON.parse(savedPaymentInfo);
+                
+                // 填充表单
+                document.getElementById('wallet-address').value = paymentInfo.walletAddress;
+                document.getElementById('currency').value = paymentInfo.currency;
+                document.getElementById('amount').value = paymentInfo.amount;
+                document.getElementById('title').value = paymentInfo.title;
+                document.getElementById('description').value = paymentInfo.description;
+                
+                // 触发货币符号更新
+                document.getElementById('currency').dispatchEvent(new Event('change'));
+                
+                // 询问用户是否要恢复之前的收款
+                if (confirm('检测到您之前创建的收款信息，是否要恢复？')) {
+                    // 模拟表单提交
+                    document.getElementById('generate-qr-btn').click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
