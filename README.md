@@ -27,3 +27,6 @@ eCNH-USDT pool,
 
 https://www.orca.so/pools/EoEjy16d4vkejxF5VueDhAV8kCTHe2Mz1JUEWuZojamy
 
+Welcome global netizens to add eCNH-USDT liquidity pool,
+
+欢迎全球网友来添加eCNH-USDT流动池。 
