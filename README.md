@@ -23,3 +23,7 @@ Distributed Stablecoin eCNH CA:
 
 7GQnqthWKa5v2GqXYWhmgWZY5mCRrniwK3Xuinm9GKw5u
 
+eCNH-USDT pool,
+
+https://www.orca.so/pools/EoEjy16d4vkejxF5VueDhAV8kCTHe2Mz1JUEWuZojamy
+
